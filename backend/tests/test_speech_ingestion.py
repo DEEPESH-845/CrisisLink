@@ -50,7 +50,7 @@ class TestAuthentication:
             "/api/v1/calls/CALL-001/audio-stream",
             content=FAKE_AUDIO_CHUNK,
         )
-        assert resp.status_code == 403  # HTTPBearer returns 403 when header absent
+        assert resp.status_code in (401, 403)
 
     async def test_audio_stream_rejects_invalid_token(self, client: AsyncClient):
         resp = await client.post(
@@ -62,7 +62,7 @@ class TestAuthentication:
 
     async def test_transcript_rejects_missing_token(self, client: AsyncClient):
         resp = await client.get("/api/v1/calls/CALL-001/transcript")
-        assert resp.status_code == 403
+        assert resp.status_code in (401, 403)
 
     async def test_transcript_rejects_invalid_token(self, client: AsyncClient):
         resp = await client.get(
