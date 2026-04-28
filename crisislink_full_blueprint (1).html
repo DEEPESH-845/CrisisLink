@@ -1,0 +1,151 @@
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+.wrap{padding:1.5rem 0;font-family:var(--font-sans)}
+.hero{background:var(--color-background-secondary);border-radius:var(--border-radius-lg);padding:24px 28px;margin-bottom:2rem}
+.hero-name{font-size:26px;font-weight:500;color:var(--color-text-primary);letter-spacing:-0.5px}
+.hero-tag{font-size:13px;color:var(--color-text-secondary);margin-top:6px;line-height:1.6}
+.pill{display:inline-block;font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;margin-right:6px;margin-top:6px}
+.p-red{background:#FCEBEB;color:#A32D2D}
+.p-blue{background:#E6F1FB;color:#0C447C}
+.p-teal{background:#E1F5EE;color:#0F6E56}
+.p-amber{background:#FAEEDA;color:#854F0B}
+.p-purple{background:#EEEDFE;color:#3C3489}
+.p-gray{background:#F1EFE8;color:#5F5E5A}
+.section-label{font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--color-text-tertiary);margin-bottom:12px;margin-top:2rem}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:16px 18px;margin-bottom:10px}
+.card-title{font-size:14px;font-weight:500;color:var(--color-text-primary);margin-bottom:5px}
+.card-body{font-size:13px;color:var(--color-text-secondary);line-height:1.6}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px}
+.stat{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:14px 16px;text-align:center}
+.stat-num{font-size:24px;font-weight:500;color:var(--color-text-primary)}
+.stat-label{font-size:11px;color:var(--color-text-secondary);margin-top:3px;line-height:1.4}
+.flow{display:flex;align-items:center;gap:0;margin:12px 0;flex-wrap:wrap}
+.flow-step{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:10px 14px;font-size:12px;color:var(--color-text-primary);font-weight:500;white-space:nowrap}
+.flow-arrow{font-size:14px;color:var(--color-text-tertiary);padding:0 8px}
+.quote{border-left:2px solid #378ADD;padding:12px 16px;background:var(--color-background-secondary);border-radius:0 var(--border-radius-md) var(--border-radius-md) 0;margin:12px 0;font-size:13px;color:var(--color-text-secondary);line-height:1.6;font-style:italic}
+.demo-step{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px}
+.demo-num{width:26px;height:26px;border-radius:50%;background:#E6F1FB;color:#0C447C;font-size:12px;font-weight:500;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.demo-text{font-size:13px;color:var(--color-text-secondary);line-height:1.6}
+.demo-text strong{color:var(--color-text-primary);font-weight:500}
+.divider{border:none;border-top:0.5px solid var(--color-border-tertiary);margin:2rem 0}
+.warn{background:#FAEEDA;border-radius:var(--border-radius-md);padding:12px 16px;font-size:13px;color:#854F0B;margin:10px 0;line-height:1.6}
+.usp{display:flex;gap:10px;align-items:flex-start;margin-bottom:10px}
+.usp-dot{width:6px;height:6px;border-radius:50%;background:#378ADD;flex-shrink:0;margin-top:6px}
+.usp-text{font-size:13px;color:var(--color-text-secondary);line-height:1.6}
+.usp-text strong{color:var(--color-text-primary);font-weight:500}
+</style>
+<div class="wrap">
+
+  <div class="hero">
+    <div class="hero-name">CrisisLink</div>
+    <div class="hero-tag">AI co-pilot for India's 112 emergency response infrastructure<br>Track: Rapid Crisis Response — Open Innovation</div>
+    <div style="margin-top:10px">
+      <span class="pill p-blue">Gemini Live API</span>
+      <span class="pill p-teal">Firebase Realtime DB</span>
+      <span class="pill p-teal">Google Maps API</span>
+      <span class="pill p-blue">Flutter</span>
+      <span class="pill p-purple">Google Cloud Run</span>
+      <span class="pill p-amber">Vertex AI</span>
+    </div>
+  </div>
+
+  <div class="section-label">The numbers that open the pitch</div>
+  <div class="grid3" style="margin-bottom:2rem">
+    <div class="stat"><div class="stat-num">700K</div><div class="stat-label">calls to 112 daily in India</div></div>
+    <div class="stat"><div class="stat-num">8–14 min</div><div class="stat-label">average call-to-dispatch time</div></div>
+    <div class="stat"><div class="stat-num">6 min</div><div class="stat-label">brain death begins in cardiac arrest</div></div>
+    <div class="stat"><div class="stat-num">22+</div><div class="stat-label">Indian languages Gemini handles natively</div></div>
+  </div>
+
+  <div class="section-label">One-line problem</div>
+  <div class="quote">India's 112 operators receive 700,000 calls a day with zero AI assistance. The 8-minute gap between call and dispatch is where people die. Nobody has built the intelligence layer — until now.</div>
+
+  <div class="section-label">What CrisisLink does — 4 simultaneous actions in under 5 seconds</div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">1. Real-time call triage</div>
+      <div class="card-body">Gemini Live API listens to the incoming call. Classifies emergency type (medical / fire / crime / accident) and severity in under 5 seconds. Works in Hindi, Punjabi, Tamil, Bengali — any Indian language, no manual switching.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">2. Caller state detection</div>
+      <div class="card-body">Detects panic level, coherence, whether caller is victim or bystander. Adjusts response protocol automatically — a panicked child gets different instructions than a calm bystander.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">3. Instant dispatch recommendation</div>
+      <div class="card-body">Firebase Realtime DB pulls nearest available unit (ambulance / fire / police). Google Maps API calculates live ETA factoring traffic. Operator gets a one-tap dispatch — no manual lookup, no phone calls to find availability.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">4. Guided caller support</div>
+      <div class="card-body">While dispatch happens in parallel, Gemini talks the caller through CPR, fire evacuation, or stay-calm protocol — in their language — keeping them alive until help arrives. This is the feature no competitor has.</div>
+    </div>
+  </div>
+
+  <div class="section-label">System flow</div>
+  <div class="flow">
+    <div class="flow-step">Call comes in</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Gemini classifies in 5s</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Nearest unit pulled</div><div class="flow-arrow">→</div>
+    <div class="flow-step">One-tap dispatch</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Gemini guides caller</div><div class="flow-arrow">→</div>
+    <div class="flow-step">Unit arrives</div>
+  </div>
+
+  <div class="section-label">Three user roles — one Flutter app</div>
+  <div class="grid3">
+    <div class="card">
+      <div class="card-title">112 Operator</div>
+      <div class="card-body">Sees live AI triage card, recommended dispatch, caller state. One tap to confirm and send. Gemini summary in plain language — no jargon.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Field Responder</div>
+      <div class="card-body">Receives dispatch with Google Maps route, case type, and caller context. Updates status in real-time back to operator dashboard.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Admin / PSAP</div>
+      <div class="card-body">Live dashboard: active incidents, unit availability heatmap, response time analytics. Vertex AI trends for resource planning.</div>
+    </div>
+  </div>
+
+  <div class="section-label">Google stack mapping — why judges will love this</div>
+  <div class="grid2">
+    <div class="card">
+      <div class="card-title">Gemini Live API</div>
+      <div class="card-body">Real-time speech understanding, multilingual triage, caller guidance generation. The core intelligence layer.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Firebase Realtime DB</div>
+      <div class="card-body">Unit availability, incident state, operator dashboard — all live-synced in milliseconds across all three user roles.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Google Maps Platform</div>
+      <div class="card-body">Live ETA routing for dispatch, traffic-aware, updates as units move. Field responder gets turn-by-turn in the same app.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Flutter + Cloud Run</div>
+      <div class="card-body">Single codebase for operator web dashboard and field responder mobile app. Cloud Run hosts the Gemini orchestration backend — serverless, scalable.</div>
+    </div>
+  </div>
+
+  <div class="section-label">The 3-minute demo script — exactly what you show</div>
+  <div class="card">
+    <div class="demo-step"><div class="demo-num">1</div><div class="demo-text"><strong>0:00 — Open with the stat.</strong> "112 gets 700,000 calls a day. Average dispatch takes 8–14 minutes. Cardiac arrest kills in 6. This is the gap we close."</div></div>
+    <div class="demo-step"><div class="demo-num">2</div><div class="demo-text"><strong>0:20 — Live call simulation.</strong> Teammate calls the demo system speaking Hindi: "Mere papa gir gaye, unhe saans nahi aa rahi" (My father fell, he can't breathe). Gemini classifies: CARDIAC — CRITICAL in 4 seconds. Judges watch it happen live on screen.</div></div>
+    <div class="demo-step"><div class="demo-num">3</div><div class="demo-text"><strong>0:45 — Operator dashboard.</strong> Show the triage card auto-populated. Nearest ambulance with cardiac unit highlighted. ETA: 7 minutes. One tap dispatch sent.</div></div>
+    <div class="demo-step"><div class="demo-num">4</div><div class="demo-text"><strong>1:15 — Gemini guides caller.</strong> While dispatch is happening, show Gemini's Hindi CPR instructions auto-playing to the caller. "Unhe seedha letao, haath seene ke beech rakho..." This is the jaw-drop moment.</div></div>
+    <div class="demo-step"><div class="demo-num">5</div><div class="demo-text"><strong>1:50 — Field responder view.</strong> Switch to Flutter mobile app. Responder sees case type, Google Maps route, patient context. Updates status — operator sees it live.</div></div>
+    <div class="demo-step"><div class="demo-num">6</div><div class="demo-text"><strong>2:20 — Admin dashboard.</strong> Show Vertex AI analytics — response time trends, unit heatmap, incident types. "This is what PSAP command rooms need."</div></div>
+    <div class="demo-step"><div class="demo-num">7</div><div class="demo-text"><strong>2:45 — Close.</strong> "We didn't build a new app. We built the AI layer India's emergency infrastructure never had. 700,000 calls. Every day. Starting now."</div></div>
+  </div>
+
+  <div class="section-label">Your unfair advantages — why YOU win this</div>
+  <div class="usp"><div class="usp-dot"></div><div class="usp-text"><strong>QuantumSight architecture:</strong> You built real-time scoring + triage + alert tiers at PNB × IIT Kanpur. CrisisLink's severity scoring is the same pattern — you're not starting from zero.</div></div>
+  <div class="usp"><div class="usp-dot"></div><div class="usp-text"><strong>CyberSentinel:</strong> Real-time threat detection pipeline with sub-2s response. The alert routing logic maps directly to dispatch recommendation.</div></div>
+  <div class="usp"><div class="usp-dot"></div><div class="usp-text"><strong>MediFlow Vita:</strong> Emergency readiness, Groq API integration, Supabase real-time. You have the medical emergency context already built.</div></div>
+  <div class="usp"><div class="usp-dot"></div><div class="usp-text"><strong>Multilingual India angle:</strong> Gemini natively handles 22+ Indian languages. No other team will demo a Hindi cardiac arrest call. That moment is yours alone.</div></div>
+  <div class="usp"><div class="usp-dot"></div><div class="usp-text"><strong>Scale is built-in:</strong> You're not pitching adoption — 700,000 people already use 112 daily. Growth story is India itself.</div></div>
+
+  <div class="section-label">What makes this un-copyable in the room</div>
+  <div class="warn">Every other team will build a new consumer app. You're building AI infrastructure on top of a system with 700 million potential users. The insight — that the gap between call and dispatch is the real problem — is not obvious. Nobody else in that room will have thought of it.</div>
+
+</div>

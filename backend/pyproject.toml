@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "crisislink-backend"
+version = "0.1.0"
+description = "CrisisLink Emergency AI Co-Pilot — Backend Services"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Proprietary"}
+
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.34.0",
+    "pydantic>=2.11.0",
+    "firebase-admin>=6.7.0",
+    "google-cloud-bigquery>=3.34.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "hypothesis>=6.130.0",
+    "pytest>=8.4.0",
+    "pytest-asyncio>=1.0.0",
+    "httpx>=0.28.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "shared", "speech_ingestion", "intelligence", "dispatch", "tts"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["shared*", "speech_ingestion*", "intelligence*", "dispatch*", "tts*"]

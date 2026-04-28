@@ -1,0 +1,6 @@
+{
+  "projects": {
+    "default": "crisislink-prod",
+    "staging": "crisislink-staging"
+  }
+}

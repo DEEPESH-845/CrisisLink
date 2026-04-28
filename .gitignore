@@ -1,0 +1,23 @@
+/.kiro
+.DS_Store
+/.vscode
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+dist/
+build/
+.venv/
+.env
+
+# Flutter
+frontend/crisislink/.dart_tool/
+frontend/crisislink/.packages
+frontend/crisislink/build/
+frontend/crisislink/.flutter-plugins
+frontend/crisislink/.flutter-plugins-dependencies
+
+# Firebase
+shared/firebase/.firebase/

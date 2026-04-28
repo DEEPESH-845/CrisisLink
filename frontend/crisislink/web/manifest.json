@@ -1,0 +1,11 @@
+{
+  "name": "CrisisLink",
+  "short_name": "CrisisLink",
+  "start_url": ".",
+  "display": "standalone",
+  "background_color": "#1565C0",
+  "theme_color": "#1565C0",
+  "description": "CrisisLink Emergency AI Co-Pilot",
+  "orientation": "portrait-primary",
+  "prefer_related_applications": false
+}

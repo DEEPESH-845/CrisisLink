@@ -1,0 +1,67 @@
+{
+  "rules": {
+    "calls": {
+      "$call_id": {
+        "transcript": {
+          ".read": "auth != null && (auth.token.role === 'operator' || auth.token.role === 'admin')",
+          ".write": "auth != null && auth.token.role === 'service'"
+        },
+        "classification": {
+          ".read": "auth != null && (auth.token.role === 'operator' || auth.token.role === 'responder' || auth.token.role === 'admin')",
+          ".write": "auth != null && auth.token.role === 'service'"
+        },
+        "caller_state": {
+          ".read": "auth != null && (auth.token.role === 'operator' || auth.token.role === 'admin')",
+          ".write": "auth != null && auth.token.role === 'service'"
+        },
+        "dispatch_card": {
+          ".read": "auth != null && (auth.token.role === 'operator' || auth.token.role === 'admin')",
+          ".write": "auth != null && auth.token.role === 'service'"
+        },
+        "confirmed_unit": {
+          ".read": "auth != null && (auth.token.role === 'operator' || auth.token.role === 'responder' || auth.token.role === 'admin')",
+          ".write": "auth != null && (auth.token.role === 'operator' || auth.token.role === 'service')"
+        },
+        "guidance": {
+          ".read": "auth != null && (auth.token.role === 'operator' || auth.token.role === 'admin')",
+          ".write": "auth != null && auth.token.role === 'service'"
+        },
+        "manual_override": {
+          ".read": "auth != null && (auth.token.role === 'operator' || auth.token.role === 'admin')",
+          ".write": "auth != null && auth.token.role === 'operator'"
+        },
+        "started_at": {
+          ".read": "auth != null && (auth.token.role === 'operator' || auth.token.role === 'admin')",
+          ".write": "auth != null && auth.token.role === 'service'"
+        },
+        "updated_at": {
+          ".read": "auth != null && (auth.token.role === 'operator' || auth.token.role === 'admin')",
+          ".write": "auth != null && (auth.token.role === 'service' || auth.token.role === 'operator')"
+        }
+      }
+    },
+    "units": {
+      "$unit_id": {
+        ".read": "auth != null && (auth.token.role === 'operator' || auth.token.role === 'admin' || (auth.token.role === 'responder' && auth.token.unit_id === $unit_id) || auth.token.role === 'service')",
+        "status": {
+          ".write": "auth != null && (auth.token.role === 'service' || (auth.token.role === 'responder' && auth.token.unit_id === $unit_id))"
+        },
+        "location": {
+          ".write": "auth != null && (auth.token.role === 'service' || (auth.token.role === 'responder' && auth.token.unit_id === $unit_id))"
+        },
+        "type": {
+          ".write": "auth != null && auth.token.role === 'admin'"
+        },
+        "hospital_or_station": {
+          ".write": "auth != null && auth.token.role === 'admin'"
+        },
+        "capabilities": {
+          ".write": "auth != null && auth.token.role === 'admin'"
+        },
+        "last_updated": {
+          ".write": "auth != null && (auth.token.role === 'service' || (auth.token.role === 'responder' && auth.token.unit_id === $unit_id))"
+        }
+      }
+    }
+  }
+}

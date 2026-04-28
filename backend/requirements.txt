@@ -1,0 +1,12 @@
+# Core dependencies
+fastapi>=0.115.0
+uvicorn[standard]>=0.34.0
+pydantic>=2.11.0
+firebase-admin>=6.7.0
+google-cloud-bigquery>=3.34.0
+
+# Dev / testing dependencies
+hypothesis>=6.130.0
+pytest>=8.4.0
+pytest-asyncio>=1.0.0
+httpx>=0.28.0
