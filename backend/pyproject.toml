@@ -27,7 +27,7 @@ dev = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests", "shared", "speech_ingestion", "intelligence", "dispatch", "tts"]
+testpaths = ["tests", "shared", "speech_ingestion", "intelligence", "dispatch", "tts", "integration"]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
@@ -35,4 +35,4 @@ asyncio_mode = "auto"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["shared*", "speech_ingestion*", "intelligence*", "dispatch*", "tts*"]
+include = ["shared*", "speech_ingestion*", "intelligence*", "dispatch*", "tts*", "integration*"]
