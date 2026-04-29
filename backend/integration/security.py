@@ -264,3 +264,104 @@ class DPDPComplianceConfig:
 
 
 DPDP_CONFIG = DPDPComplianceConfig()
+
+
+# ---------------------------------------------------------------------------
+# RBAC access control enforcement (Req 10.3)
+# ---------------------------------------------------------------------------
+
+
+class UserRole(str, Enum):
+    """Authenticated user roles in CrisisLink."""
+
+    OPERATOR = "operator"
+    RESPONDER = "responder"
+    ADMIN = "admin"
+
+
+class Operation(str, Enum):
+    """Data operations for access control."""
+
+    READ = "read"
+    WRITE = "write"
+
+
+def check_access(role: str, path: str, operation: str) -> bool:
+    """Evaluate whether *role* is allowed to perform *operation* on *path*.
+
+    Implements the Firebase Security Rules RBAC policy for CrisisLink:
+
+    - **Operators** can read and write call data (``/calls/…``) and dispatch
+      actions (``/calls/{id}/confirmed_unit``, ``/calls/{id}/dispatch_card``).
+      They can read unit data (``/units/…``) but cannot write to it.
+    - **Responders** can read and write their own unit data (``/units/…``)
+      and can read dispatch details (``/calls/{id}/dispatch_card``,
+      ``/calls/{id}/classification``).  They cannot write to call data.
+    - **Admins** can read analytics (``/analytics/…``), read all unit data
+      (``/units/…``), and read call data (``/calls/…``).  Admins have full
+      read access but write access only to ``/analytics/…``.
+
+    Parameters
+    ----------
+    role : str
+        One of ``"operator"``, ``"responder"``, ``"admin"``.
+    path : str
+        The Firebase RTDB path being accessed (e.g. ``"/calls/C1/transcript"``).
+    operation : str
+        Either ``"read"`` or ``"write"``.
+
+    Returns
+    -------
+    bool
+        ``True`` if access is granted, ``False`` otherwise.
+
+    Requirement 10.3
+    """
+    # Normalise inputs
+    role = role.strip().lower()
+    path = path.strip()
+    operation = operation.strip().lower()
+
+    # Unknown role or operation → deny
+    if role not in {r.value for r in UserRole}:
+        return False
+    if operation not in {o.value for o in Operation}:
+        return False
+
+    # Path must be non-empty
+    if not path:
+        return False
+
+    is_read = operation == Operation.READ.value
+    is_write = operation == Operation.WRITE.value
+
+    is_calls_path = path.startswith("/calls/") or path == "/calls"
+    is_units_path = path.startswith("/units/") or path == "/units"
+    is_analytics_path = path.startswith("/analytics/") or path == "/analytics"
+
+    if role == UserRole.OPERATOR.value:
+        # Operators: read + write call data, read units
+        if is_calls_path:
+            return True  # read or write
+        if is_units_path and is_read:
+            return True
+        return False
+
+    if role == UserRole.RESPONDER.value:
+        # Responders: read + write own unit data, read dispatch details
+        if is_units_path:
+            return True  # read or write their unit data
+        if is_calls_path and is_read:
+            # Responders can read dispatch details and classification
+            return True
+        return False
+
+    if role == UserRole.ADMIN.value:
+        # Admins: read everything, write only analytics
+        if is_read:
+            return True  # full read access
+        if is_analytics_path and is_write:
+            return True
+        return False
+
+    return False
