@@ -329,3 +329,97 @@ class TestFailoverTranscriberThreshold:
         ft = FailoverTranscriber(primary, fallback)
         assert ft.threshold_seconds == 3.0
         assert DEFAULT_LATENCY_THRESHOLD_SECONDS == 3.0
+
+
+# ===========================================================================
+# Failover audit log entry format tests
+# ===========================================================================
+
+
+class TestFailoverAuditLogFormat:
+    """Verify failover audit log entries match the BigQuery Audit_Log_Entry schema.
+
+    The design specifies audit entries with: call_id, event_type (enum including
+    'failover'), payload (event-specific data), and timestamp (ISO 8601).
+
+    Requirements: 1.5, 1.6
+    """
+
+    def test_audit_entry_has_all_required_fields(self):
+        """AuditEntry dataclass has call_id, event_type, timestamp, payload."""
+        entry = AuditEntry(
+            call_id="call-1",
+            event_type="failover",
+            timestamp=datetime.now(timezone.utc),
+            payload={"reason": "test"},
+        )
+        assert hasattr(entry, "call_id")
+        assert hasattr(entry, "event_type")
+        assert hasattr(entry, "timestamp")
+        assert hasattr(entry, "payload")
+
+    def test_failover_entry_timestamp_is_utc(self):
+        """Failover audit entries must have UTC timezone-aware timestamps."""
+        primary = SlowTranscriber(delay_seconds=0.05)
+        fallback = FallbackTranscriber()
+        logger = MockAuditLogger()
+        ft = FailoverTranscriber(primary, fallback, audit_logger=logger, threshold_seconds=0.01)
+
+        ft.transcribe(SAMPLE_CHUNK)
+
+        entry = logger.last_entry()
+        assert entry is not None
+        assert entry.timestamp.tzinfo is not None
+        assert entry.timestamp.tzinfo == timezone.utc
+
+    def test_failover_payload_contains_all_required_fields(self):
+        """Failover payload must include reason, latency, threshold, primary, and fallback identifiers."""
+        primary = SlowTranscriber(delay_seconds=0.05)
+        fallback = FallbackTranscriber()
+        logger = MockAuditLogger()
+        ft = FailoverTranscriber(primary, fallback, audit_logger=logger, threshold_seconds=0.01)
+
+        ft.transcribe(SAMPLE_CHUNK)
+
+        entry = logger.last_entry()
+        assert entry is not None
+        payload = entry.payload
+        required_keys = {"reason", "latency_seconds", "threshold_seconds", "primary", "fallback"}
+        assert required_keys.issubset(payload.keys())
+
+    def test_failover_payload_latency_is_numeric(self):
+        """The latency_seconds in the payload must be a positive number."""
+        primary = SlowTranscriber(delay_seconds=0.05)
+        fallback = FallbackTranscriber()
+        logger = MockAuditLogger()
+        ft = FailoverTranscriber(primary, fallback, audit_logger=logger, threshold_seconds=0.01)
+
+        ft.transcribe(SAMPLE_CHUNK)
+
+        entry = logger.last_entry()
+        assert entry is not None
+        assert isinstance(entry.payload["latency_seconds"], (int, float))
+        assert entry.payload["latency_seconds"] > 0
+
+    def test_failover_event_type_is_failover(self):
+        """The event_type for failover entries must be exactly 'failover'."""
+        primary = SlowTranscriber(delay_seconds=0.05)
+        fallback = FallbackTranscriber()
+        logger = MockAuditLogger()
+        ft = FailoverTranscriber(primary, fallback, audit_logger=logger, threshold_seconds=0.01)
+
+        ft.transcribe(SAMPLE_CHUNK)
+
+        entry = logger.last_entry()
+        assert entry is not None
+        assert entry.event_type == "failover"
+
+    def test_no_audit_entry_without_logger(self):
+        """When no audit logger is provided, failover still works but nothing is logged."""
+        primary = SlowTranscriber(delay_seconds=0.05)
+        fallback = FallbackTranscriber()
+        ft = FailoverTranscriber(primary, fallback, audit_logger=None, threshold_seconds=0.01)
+
+        result = ft.transcribe(SAMPLE_CHUNK)
+        assert result.text == "[google-stt-v2]"
+        assert ft.using_fallback is True

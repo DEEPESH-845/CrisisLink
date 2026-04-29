@@ -208,3 +208,59 @@ class TestTranscriptEndpoint:
             headers=AUTH_HEADER,
         )
         assert resp.json()["language_detected"] == "unknown"
+
+
+# -----------------------------------------------------------------------
+# Transcript schema Pydantic validation tests
+# -----------------------------------------------------------------------
+
+
+class TestTranscriptResponseSchema:
+    """Validate TranscriptResponse Pydantic model matches design spec.
+
+    Requirements: 1.1, 1.2
+    """
+
+    def test_schema_has_all_required_fields(self):
+        """TranscriptResponse must contain call_id, transcript, language_detected, chunks_processed."""
+        from speech_ingestion.schemas import TranscriptResponse
+
+        fields = set(TranscriptResponse.model_fields.keys())
+        assert {"call_id", "transcript", "language_detected", "chunks_processed"} == fields
+
+    def test_schema_field_types(self):
+        """Verify field types match the design spec."""
+        from speech_ingestion.schemas import TranscriptResponse
+
+        resp = TranscriptResponse(call_id="CALL-001", transcript="hello", language_detected="hi", chunks_processed=3)
+        assert isinstance(resp.call_id, str)
+        assert isinstance(resp.transcript, str)
+        assert isinstance(resp.language_detected, str)
+        assert isinstance(resp.chunks_processed, int)
+
+    def test_schema_defaults(self):
+        """Verify default values for optional fields."""
+        from speech_ingestion.schemas import TranscriptResponse
+
+        resp = TranscriptResponse(call_id="CALL-001")
+        assert resp.transcript == ""
+        assert resp.language_detected == "unknown"
+        assert resp.chunks_processed == 0
+
+    def test_schema_serialization_matches_endpoint(self):
+        """Serialized TranscriptResponse matches the GET /transcript JSON shape."""
+        from speech_ingestion.schemas import TranscriptResponse
+
+        resp = TranscriptResponse(
+            call_id="CALL-001",
+            transcript="emergency at sector 5",
+            language_detected="hi",
+            chunks_processed=4,
+        )
+        data = resp.model_dump()
+        assert data == {
+            "call_id": "CALL-001",
+            "transcript": "emergency at sector 5",
+            "language_detected": "hi",
+            "chunks_processed": 4,
+        }

@@ -133,6 +133,48 @@ class TestAudioChunkerFlush:
         assert chunker.flush() is None
 
 
+class TestAudioChunker500msSegments:
+    """Verify chunk size derives from 500ms at 16 kHz, 16-bit mono PCM.
+
+    Requirements: 1.1, 1.2
+    """
+
+    def test_chunk_size_matches_500ms_formula(self):
+        """CHUNK_SIZE_BYTES = sample_rate × duration_s × bytes_per_sample × channels."""
+        from speech_ingestion.chunker import (
+            CHANNELS,
+            CHUNK_DURATION_MS,
+            SAMPLE_RATE,
+            SAMPLE_WIDTH,
+        )
+
+        expected = int(SAMPLE_RATE * (CHUNK_DURATION_MS / 1000) * SAMPLE_WIDTH * CHANNELS)
+        assert CHUNK_SIZE_BYTES == expected
+        assert CHUNK_SIZE_BYTES == 16_000
+
+    def test_audio_parameters_match_spec(self):
+        """Audio format constants match the design spec: PCM 16-bit, 16 kHz, mono."""
+        from speech_ingestion.chunker import CHANNELS, CHUNK_DURATION_MS, SAMPLE_RATE, SAMPLE_WIDTH
+
+        assert SAMPLE_RATE == 16_000
+        assert SAMPLE_WIDTH == 2  # 16-bit
+        assert CHANNELS == 1  # mono
+        assert CHUNK_DURATION_MS == 500
+
+    def test_each_chunk_is_exactly_500ms_of_audio(self):
+        """Each output chunk contains exactly 500ms worth of PCM samples."""
+        chunker = AudioChunker()
+        # Feed 2 seconds of audio (4 × 500ms chunks)
+        two_seconds = b"\x00" * (CHUNK_SIZE_BYTES * 4)
+        chunks = chunker.add_audio(two_seconds)
+        assert len(chunks) == 4
+        for chunk in chunks:
+            # Each chunk: 16000 bytes = 8000 samples × 2 bytes = 0.5s at 16kHz
+            samples = len(chunk) // 2  # 16-bit = 2 bytes per sample
+            duration_seconds = samples / 16_000
+            assert duration_seconds == pytest.approx(0.5)
+
+
 class TestAudioChunkerReset:
     """Reset clears all buffered audio."""
 
