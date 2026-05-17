@@ -239,6 +239,9 @@ class _RecommendationTile extends StatelessWidget {
     final result = await dispatchApiService.confirmDispatch(
       callId: callId,
       unitId: recommendation.unitId,
+      emergencyType: provider.classification?.emergencyType.value,
+      severity: provider.classification?.severity.value,
+      keyFacts: provider.classification?.keyFacts ?? const [],
     );
 
     if (result.success) {

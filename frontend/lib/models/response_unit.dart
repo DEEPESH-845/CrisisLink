@@ -79,7 +79,7 @@ class ResponseUnit {
       type: UnitType.fromString(json['type'] as String? ?? 'ambulance'),
       status: UnitStatus.fromString(json['status'] as String? ?? 'available'),
       location: json['location'] != null
-          ? Location.fromJson(json['location'] as Map<String, dynamic>)
+          ? Location.fromJson(Map<String, dynamic>.from(json['location'] as Map))
           : const Location(lat: 0, lng: 0),
       hospitalOrStation: json['hospital_or_station'] as String? ?? '',
       capabilities: (json['capabilities'] as List<dynamic>?)

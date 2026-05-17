@@ -21,32 +21,52 @@ class DefaultFirebaseOptions {
     }
   }
 
-  // TODO: Replace with actual Firebase project values
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'YOUR_WEB_API_KEY',
-    appId: 'YOUR_WEB_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'crisislink-prod',
-    databaseURL: 'https://crisislink-prod-default-rtdb.firebaseio.com',
-    storageBucket: 'crisislink-prod.appspot.com',
+    apiKey: String.fromEnvironment('FIREBASE_WEB_API_KEY'),
+    appId: String.fromEnvironment('FIREBASE_WEB_APP_ID'),
+    messagingSenderId: String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID'),
+    projectId: String.fromEnvironment('FIREBASE_PROJECT_ID', defaultValue: 'crisislink-prod'),
+    databaseURL: String.fromEnvironment(
+      'FIREBASE_DATABASE_URL',
+      defaultValue: 'https://crisislink-prod-default-rtdb.firebaseio.com',
+    ),
+    storageBucket: String.fromEnvironment(
+      'FIREBASE_STORAGE_BUCKET',
+      defaultValue: 'crisislink-prod.appspot.com',
+    ),
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'YOUR_ANDROID_API_KEY',
-    appId: 'YOUR_ANDROID_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'crisislink-prod',
-    databaseURL: 'https://crisislink-prod-default-rtdb.firebaseio.com',
-    storageBucket: 'crisislink-prod.appspot.com',
+    apiKey: String.fromEnvironment('FIREBASE_ANDROID_API_KEY'),
+    appId: String.fromEnvironment('FIREBASE_ANDROID_APP_ID'),
+    messagingSenderId: String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID'),
+    projectId: String.fromEnvironment('FIREBASE_PROJECT_ID', defaultValue: 'crisislink-prod'),
+    databaseURL: String.fromEnvironment(
+      'FIREBASE_DATABASE_URL',
+      defaultValue: 'https://crisislink-prod-default-rtdb.firebaseio.com',
+    ),
+    storageBucket: String.fromEnvironment(
+      'FIREBASE_STORAGE_BUCKET',
+      defaultValue: 'crisislink-prod.appspot.com',
+    ),
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'YOUR_IOS_API_KEY',
-    appId: 'YOUR_IOS_APP_ID',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    projectId: 'crisislink-prod',
-    databaseURL: 'https://crisislink-prod-default-rtdb.firebaseio.com',
-    storageBucket: 'crisislink-prod.appspot.com',
-    iosBundleId: 'com.crisislink.app',
+    apiKey: String.fromEnvironment('FIREBASE_IOS_API_KEY'),
+    appId: String.fromEnvironment('FIREBASE_IOS_APP_ID'),
+    messagingSenderId: String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID'),
+    projectId: String.fromEnvironment('FIREBASE_PROJECT_ID', defaultValue: 'crisislink-prod'),
+    databaseURL: String.fromEnvironment(
+      'FIREBASE_DATABASE_URL',
+      defaultValue: 'https://crisislink-prod-default-rtdb.firebaseio.com',
+    ),
+    storageBucket: String.fromEnvironment(
+      'FIREBASE_STORAGE_BUCKET',
+      defaultValue: 'crisislink-prod.appspot.com',
+    ),
+    iosBundleId: String.fromEnvironment(
+      'FIREBASE_IOS_BUNDLE_ID',
+      defaultValue: 'com.crisislink.app',
+    ),
   );
 }

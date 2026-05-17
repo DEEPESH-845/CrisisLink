@@ -40,6 +40,11 @@ class ConfirmRequest(BaseModel):
     """Body for POST /api/v1/calls/{call_id}/dispatch/confirm."""
 
     unit_id: str = Field(..., description="ID of the unit to dispatch")
+    emergency_type: str | None = Field(default=None)
+    severity: str | None = Field(default=None)
+    caller_lat: float | None = Field(default=None)
+    caller_lng: float | None = Field(default=None)
+    key_facts: list[str] = Field(default_factory=list)
 
 
 class ConfirmResponse(BaseModel):

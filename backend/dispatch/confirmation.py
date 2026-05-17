@@ -57,6 +57,34 @@ class MockFCMClient:
         return True
 
 
+class FirebaseFCMClient:
+    """Firebase Cloud Messaging client for responder dispatch alerts."""
+
+    async def send_dispatch_notification(
+        self, unit_id: str, call_id: str, payload: dict[str, Any]
+    ) -> bool:
+        try:
+            import firebase_admin
+            from firebase_admin import credentials, messaging
+
+            if not firebase_admin._apps:
+                firebase_admin.initialize_app(credentials.ApplicationDefault())
+
+            message = messaging.Message(
+                topic=f"unit_{unit_id}",
+                data={k: str(v) for k, v in payload.items()},
+                notification=messaging.Notification(
+                    title=f"Dispatch assigned: {payload.get('emergency_type', 'Emergency')}",
+                    body=f"Call {call_id} severity {payload.get('severity', 'UNKNOWN')}",
+                ),
+            )
+            messaging.send(message)
+            return True
+        except Exception as exc:
+            logger.warning("Firebase FCM send failed for unit %s: %s", unit_id, exc)
+            return False
+
+
 class MockAuditLogger:
     """Mock audit logger that records entries in memory for testing."""
 
@@ -74,6 +102,7 @@ async def confirm_dispatch(
     unit_store: Any,
     fcm_client: FCMClient,
     audit_logger: AuditLogger,
+    dispatch_context: dict[str, Any] | None = None,
 ) -> dict[str, str]:
     """Execute the dispatch confirmation flow.
 
@@ -87,10 +116,30 @@ async def confirm_dispatch(
     await unit_store.update_unit_status(unit_id, "dispatched")
     logger.info("Unit %s status updated to dispatched for call %s", unit_id, call_id)
 
+    dispatch_data = {
+        "call_id": call_id,
+        "unit_id": unit_id,
+        "emergency_type": "UNKNOWN",
+        "severity": "LOW",
+        "caller_lat": 0.0,
+        "caller_lng": 0.0,
+        "key_facts": [],
+        "dispatched_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if dispatch_context:
+        dispatch_data.update({k: v for k, v in dispatch_context.items() if v is not None})
+
+    if hasattr(unit_store, "set_unit_dispatch"):
+        await unit_store.set_unit_dispatch(unit_id, dispatch_data)
+
     # 2. Send FCM push notification
     notification_payload = {
         "call_id": call_id,
         "unit_id": unit_id,
+        "emergency_type": dispatch_data["emergency_type"],
+        "severity": dispatch_data["severity"],
+        "caller_lat": str(dispatch_data["caller_lat"]),
+        "caller_lng": str(dispatch_data["caller_lng"]),
         "action": "dispatch",
         "timestamp": datetime.now(timezone.utc).isoformat(),
     }
@@ -110,6 +159,7 @@ async def confirm_dispatch(
         payload={
             "unit_id": unit_id,
             "action": "dispatch_confirmed",
+            "dispatch_context": dispatch_data,
         },
         actor="dispatch-service",
         timestamp=datetime.now(timezone.utc),

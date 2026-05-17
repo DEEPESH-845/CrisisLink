@@ -49,6 +49,7 @@ from .firebase_guidance_writer import (
 )
 from .gemini_classifier import (
     ClassificationResult,
+    GeminiAPIError,
     GeminiClassifier,
     GeminiInvalidJSONError,
     GeminiQuotaExceededError,
@@ -80,8 +81,10 @@ _audit_logger: AuditLogger = MockAuditLogger()
 _TRUNCATED_TRANSCRIPT_LENGTH = 500
 
 # Exponential backoff settings for quota exceeded errors.
-_QUOTA_MAX_RETRIES = 3
-_QUOTA_BASE_DELAY_SECONDS = 1.0
+# Base delay is 30s — Gemini free-tier rate limit windows are typically 60s;
+# the API itself reports ~21s retryDelay on 429 responses.
+_QUOTA_MAX_RETRIES = 2
+_QUOTA_BASE_DELAY_SECONDS = 30.0
 
 
 def configure(
@@ -301,7 +304,7 @@ def classify_transcript(
         classification = _parse_classification(
             call_id, result.raw_json, result.model_version
         )
-    except (GeminiTimeoutError, GeminiInvalidJSONError, GeminiQuotaExceededError) as exc:
+    except (GeminiTimeoutError, GeminiInvalidJSONError, GeminiQuotaExceededError, GeminiAPIError) as exc:
         logger.error(
             "All Gemini retries exhausted for call %s: %s — returning default classification",
             call_id,

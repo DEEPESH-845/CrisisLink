@@ -14,13 +14,19 @@ Requirements: 5.3, 5.5
 
 from __future__ import annotations
 
+import os
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import Depends, FastAPI, Response, status
 from fastapi.responses import JSONResponse
 
 from .auth import verify_bearer_token
 from .schemas import SynthesizeRequest
 from .service import build_fallback_response_dict, synthesize_speech
-from .tts_client import MockTTSClient, TTSClient
+from .tts_client import GoogleCloudTTSClient, MockTTSClient, TTSClient
 
 app = FastAPI(
     title="CrisisLink TTS Service",
@@ -35,7 +41,11 @@ app = FastAPI(
 # TTS client dependency — swappable for testing
 # ---------------------------------------------------------------------------
 
-_tts_client: TTSClient = MockTTSClient()
+_tts_client: TTSClient = (
+    GoogleCloudTTSClient()
+    if os.environ.get("CRISISLINK_USE_REAL_SERVICES") == "true"
+    else MockTTSClient()
+)
 
 
 def get_tts_client() -> TTSClient:

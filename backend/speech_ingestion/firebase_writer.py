@@ -88,9 +88,8 @@ class MockTranscriptWriter:
 class FirebaseTranscriptWriter:
     """Production writer that pushes transcripts to Firebase RTDB.
 
-    Requires ``firebase_admin`` to be initialised before use.  This is a
-    placeholder — the real implementation calls
-    ``db.reference(path).set(payload)``.
+    Requires ``firebase_admin`` to be initialised before use. If no app has
+    been initialised, the default credentials from the environment are used.
     """
 
     def write_transcript(
@@ -102,16 +101,23 @@ class FirebaseTranscriptWriter:
     ) -> None:
         """Write the transcript payload to Firebase RTDB.
 
-        Raises ``NotImplementedError`` until firebase-admin is initialised
-        in the deployment environment.
+        Write the transcript payload to Firebase RTDB.
         """
         path = call_transcript(call_id)
-        _payload = {
+        payload = {
             "text": transcript,
             "language_detected": language_detected,
             "chunks_processed": chunks_processed,
         }
-        raise NotImplementedError(
-            f"FirebaseTranscriptWriter requires firebase-admin initialisation. "
-            f"Would write to {path}. Use MockTranscriptWriter for testing."
-        )
+        try:
+            import firebase_admin
+            from firebase_admin import credentials, db
+
+            if not firebase_admin._apps:
+                firebase_admin.initialize_app(credentials.ApplicationDefault())
+            db.reference(path).set(payload)
+        except Exception as exc:
+            raise NotImplementedError(
+                f"firebase-admin is not configured for transcript writes. "
+                f"Would write to {path}."
+            ) from exc

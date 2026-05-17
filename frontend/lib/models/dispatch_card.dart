@@ -64,8 +64,9 @@ class DispatchCard {
     return DispatchCard(
       callId: json['call_id'] as String? ?? '',
       recommendations: (json['recommendations'] as List<dynamic>?)
-              ?.map((e) =>
-                  DispatchRecommendation.fromJson(e as Map<String, dynamic>))
+              ?.map((e) => DispatchRecommendation.fromJson(
+                    Map<String, dynamic>.from(e as Map),
+                  ))
               .toList() ??
           [],
       generatedAt: json['generated_at'] as String? ?? '',

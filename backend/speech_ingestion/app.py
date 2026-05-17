@@ -15,6 +15,10 @@ Both endpoints require a valid Bearer token in the Authorization header.
 Requirements: 1.1, 1.2
 """
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 
 from .auth import verify_bearer_token

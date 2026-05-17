@@ -93,14 +93,21 @@ class FirebaseGuidanceWriter:
     ) -> None:
         """Write the guidance payload to Firebase RTDB.
 
-        Raises ``NotImplementedError`` until firebase-admin is initialised
-        in the deployment environment.
+        Write the guidance payload to Firebase RTDB.
         """
         path = call_guidance(call_id)
-        raise NotImplementedError(
-            f"FirebaseGuidanceWriter requires firebase-admin initialisation. "
-            f"Would write to {path}. Use MockGuidanceWriter for testing."
-        )
+        try:
+            import firebase_admin
+            from firebase_admin import credentials, db
+
+            if not firebase_admin._apps:
+                firebase_admin.initialize_app(credentials.ApplicationDefault())
+            db.reference(path).set(guidance_data)
+        except Exception as exc:
+            raise NotImplementedError(
+                f"firebase-admin is not configured for guidance writes. "
+                f"Would write to {path}."
+            ) from exc
 
 
 # ---------------------------------------------------------------------------

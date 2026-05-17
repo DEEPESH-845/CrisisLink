@@ -9,6 +9,8 @@ Requirements: 1.6
 
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Protocol, runtime_checkable
@@ -61,24 +63,37 @@ class MockAuditLogger:
 class BigQueryAuditLogger:
     """Production audit logger that writes entries to BigQuery.
 
-    Requires ``google-cloud-bigquery`` client to be initialised.  This is
-    a placeholder — the real implementation calls
-    ``client.insert_rows_json(table, [row])``.
+    Requires Application Default Credentials or ``GOOGLE_APPLICATION_CREDENTIALS``.
+    The destination table defaults to
+    ``{GCP_PROJECT_ID}.crisislink.audit_log`` and can be overridden by
+    constructor arguments.
     """
 
     def __init__(self, project_id: str = "", dataset: str = "crisislink", table: str = "audit_log") -> None:
-        self._project_id = project_id
+        self._project_id = project_id or os.environ.get("GCP_PROJECT_ID", "")
         self._dataset = dataset
         self._table = table
+        self._client = None
 
     def log(self, entry: AuditEntry) -> None:
-        """Write the audit entry to BigQuery.
+        """Write the audit entry to BigQuery."""
+        if not self._project_id:
+            raise NotImplementedError(
+                "BigQueryAuditLogger requires GCP_PROJECT_ID or an explicit project_id"
+            )
 
-        Raises ``NotImplementedError`` until the BigQuery client is
-        initialised in the deployment environment.
-        """
-        raise NotImplementedError(
-            f"BigQueryAuditLogger requires google-cloud-bigquery initialisation. "
-            f"Would write to {self._project_id}.{self._dataset}.{self._table}. "
-            f"Use MockAuditLogger for testing."
-        )
+        if self._client is None:
+            from google.cloud import bigquery  # type: ignore[import-untyped]
+
+            self._client = bigquery.Client(project=self._project_id)
+
+        table_id = f"{self._project_id}.{self._dataset}.{self._table}"
+        row = {
+            "call_id": entry.call_id,
+            "event_type": entry.event_type,
+            "timestamp": entry.timestamp.isoformat(),
+            "payload_json": json.dumps(entry.payload, ensure_ascii=False),
+        }
+        errors = self._client.insert_rows_json(table_id, [row])
+        if errors:
+            raise RuntimeError(f"BigQuery audit insert failed: {errors}")

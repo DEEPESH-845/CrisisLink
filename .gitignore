@@ -1,23 +1,61 @@
-/.kiro
-.DS_Store
-/.vscode
+# ── Secrets & credentials ────────────────────────────────────────────────────
+.env
+*.env
+backend/.env
+serviceaccount.json
+*serviceaccount*.json
+*service_account*.json
+google-credentials.json
+firebase-credentials.json
 
-# Python
+# ── Python ───────────────────────────────────────────────────────────────────
 __pycache__/
 *.py[cod]
-*.egg-info/
+*.pyo
 *.egg
+*.egg-info/
 dist/
 build/
 .venv/
-.env
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+.coverage
+coverage.xml
+*.spec
 
-# Flutter
-frontend/crisislink/.dart_tool/
-frontend/crisislink/.packages
-frontend/crisislink/build/
-frontend/crisislink/.flutter-plugins
-frontend/crisislink/.flutter-plugins-dependencies
+# ── Node / npm ────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
 
-# Firebase
-shared/firebase/.firebase/
+# ── Flutter / Dart ────────────────────────────────────────────────────────────
+frontend/.dart_tool/
+frontend/.packages
+frontend/build/
+frontend/.flutter-plugins
+frontend/.flutter-plugins-dependencies
+frontend/pubspec.lock
+*.g.dart
+
+# ── Firebase ──────────────────────────────────────────────────────────────────
+.firebase/
+firebase-debug.log
+firestore-debug.log
+database-debug.log
+ui-debug.log
+
+# ── IDEs & OS ─────────────────────────────────────────────────────────────────
+.vscode/
+.idea/
+.kiro/
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# ── Misc ─────────────────────────────────────────────────────────────────────
+*.log
+*.tmp
+*.bak

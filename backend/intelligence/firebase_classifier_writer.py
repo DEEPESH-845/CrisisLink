@@ -120,9 +120,8 @@ class MockClassificationWriter:
 class FirebaseClassificationWriter:
     """Production writer that pushes classifications to Firebase RTDB.
 
-    Requires ``firebase_admin`` to be initialised before use. This is a
-    placeholder — the real implementation calls
-    ``db.reference(path).set(payload)``.
+    Requires ``firebase_admin`` to be configured through Application Default
+    Credentials or an already-initialised app.
     """
 
     def write_classification(
@@ -132,14 +131,10 @@ class FirebaseClassificationWriter:
     ) -> None:
         """Write the classification payload to Firebase RTDB.
 
-        Raises ``NotImplementedError`` until firebase-admin is initialised
-        in the deployment environment.
+        Write the classification payload to Firebase RTDB.
         """
         path = call_classification(call_id)
-        raise NotImplementedError(
-            f"FirebaseClassificationWriter requires firebase-admin initialisation. "
-            f"Would write to {path}. Use MockClassificationWriter for testing."
-        )
+        self._set(path, classification_data)
 
     def write_caller_state(
         self,
@@ -148,11 +143,22 @@ class FirebaseClassificationWriter:
     ) -> None:
         """Write the caller state payload to Firebase RTDB.
 
-        Raises ``NotImplementedError`` until firebase-admin is initialised
-        in the deployment environment.
+        Write the caller state payload to Firebase RTDB.
         """
         path = call_caller_state(call_id)
-        raise NotImplementedError(
-            f"FirebaseClassificationWriter requires firebase-admin initialisation. "
-            f"Would write to {path}. Use MockClassificationWriter for testing."
-        )
+        self._set(path, caller_state_data)
+
+    @staticmethod
+    def _set(path: str, payload: dict[str, Any]) -> None:
+        try:
+            import firebase_admin
+            from firebase_admin import credentials, db
+
+            if not firebase_admin._apps:
+                firebase_admin.initialize_app(credentials.ApplicationDefault())
+            db.reference(path).set(payload)
+        except Exception as exc:
+            raise NotImplementedError(
+                f"firebase-admin is not configured for classification writes. "
+                f"Would write to {path}."
+            ) from exc

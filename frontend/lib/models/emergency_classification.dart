@@ -128,7 +128,9 @@ class EmergencyClassification {
           EmergencyType.fromString(json['emergency_type'] as String? ?? 'UNKNOWN'),
       severity: Severity.fromString(json['severity'] as String? ?? 'LOW'),
       callerState: json['caller_state'] != null
-          ? CallerState.fromJson(json['caller_state'] as Map<String, dynamic>)
+          ? CallerState.fromJson(
+              Map<String, dynamic>.from(json['caller_state'] as Map),
+            )
           : const CallerState(
               panicLevel: PanicLevel.calm,
               callerRole: CallerRole.witness,

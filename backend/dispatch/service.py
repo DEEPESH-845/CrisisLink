@@ -40,8 +40,8 @@ async def _get_eta_for_unit(
         eta = await maps_client.get_eta_minutes(unit_location, caller_location)
         if eta is not None:
             return eta
-    except Exception:
-        logger.warning("Maps API call failed, using fallback ETA")
+    except Exception as exc:
+        logger.warning("Maps API call failed (%s: %s), using fallback ETA", type(exc).__name__, exc)
 
     return fallback_eta_minutes(fallback_distance_km)
 

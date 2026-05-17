@@ -103,18 +103,19 @@ class CallSession {
       transcript: json['transcript'] as String? ?? '',
       classification: json['classification'] != null
           ? EmergencyClassification.fromJson(
-              json['classification'] as Map<String, dynamic>)
+              Map<String, dynamic>.from(json['classification'] as Map))
           : null,
       callerState: json['caller_state'] != null
-          ? CallerState.fromJson(json['caller_state'] as Map<String, dynamic>)
+          ? CallerState.fromJson(
+              Map<String, dynamic>.from(json['caller_state'] as Map))
           : null,
       dispatchCard: json['dispatch_card'] != null
           ? DispatchCard.fromJson(
-              json['dispatch_card'] as Map<String, dynamic>)
+              Map<String, dynamic>.from(json['dispatch_card'] as Map))
           : null,
       confirmedUnit: json['confirmed_unit'] as String?,
       guidance: json['guidance'] != null
-          ? Guidance.fromJson(json['guidance'] as Map<String, dynamic>)
+          ? Guidance.fromJson(Map<String, dynamic>.from(json['guidance'] as Map))
           : null,
       manualOverride: json['manual_override'] as bool? ?? false,
       startedAt: json['started_at'] as String? ?? '',

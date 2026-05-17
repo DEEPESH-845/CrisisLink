@@ -27,7 +27,12 @@ Requirements: 2.1, 2.7, 5.1
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any
+
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from fastapi import Depends, FastAPI
 
@@ -39,6 +44,10 @@ from .schemas import (
     GuidanceResponse,
 )
 from .service import classify_transcript, generate_guidance
+from .service import configure
+from .gemini_classifier import LiveGeminiClassifier
+from .firebase_classifier_writer import FirebaseClassificationWriter
+from .firebase_guidance_writer import FirebaseGuidanceWriter, configure_guidance_writer
 
 logger = logging.getLogger(__name__)
 
@@ -50,6 +59,13 @@ app = FastAPI(
         "and caller guidance via Gemini 1.5 Pro."
     ),
 )
+
+if os.environ.get("CRISISLINK_USE_REAL_SERVICES") == "true":
+    configure(
+        classifier=LiveGeminiClassifier(),
+        writer=FirebaseClassificationWriter(),
+    )
+    configure_guidance_writer(FirebaseGuidanceWriter())
 
 # ---------------------------------------------------------------------------
 # Firebase RTDB transcript listener infrastructure

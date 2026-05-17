@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import time
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
@@ -39,7 +40,7 @@ class ClassificationResult:
 
     raw_json: dict[str, Any]
     latency_seconds: float
-    model_version: str = "gemini-1.5-pro"
+    model_version: str = "gemini-2.5-flash"
 
 
 class GeminiAPIError(Exception):
@@ -170,43 +171,79 @@ class MockGeminiClassifier:
 
 
 class LiveGeminiClassifier:
-    """Production Gemini 1.5 Pro classifier.
+    """Production Gemini classifier using the google-genai SDK.
 
-    This is a placeholder that documents the expected integration points.
-    The real implementation requires the ``google-generativeai`` package
-    and a valid API key.
-
-    The production flow:
-    1. Build the system prompt and classification prompt.
-    2. Call Gemini 1.5 Pro with streaming enabled.
-    3. Accumulate streamed tokens into a complete JSON response.
-    4. Parse and validate the JSON against the Emergency_Classification schema.
-    5. Return the ClassificationResult with measured latency.
+    Uses the ``google-genai`` package (the replacement for the deprecated
+    ``google-generativeai`` package). Defaults to ``gemini-2.0-flash`` which
+    is fast, accurate, and available on standard API keys.
 
     Error handling:
-    - Timeout (> 5s): raise GeminiTimeoutError
-    - Invalid JSON: raise GeminiInvalidJSONError
-    - HTTP 429: raise GeminiQuotaExceededError
+    - Timeout: raise GeminiTimeoutError
+    - Invalid JSON response: raise GeminiInvalidJSONError
+    - HTTP 429 / quota exceeded: raise GeminiQuotaExceededError
+    - Any other API error: raise GeminiAPIError
     """
 
     def __init__(
         self,
-        model_name: str = "gemini-1.5-pro",
-        timeout_seconds: float = 5.0,
+        model_name: str = "gemini-2.5-flash",
+        timeout_seconds: float = 10.0,
     ) -> None:
         self._model_name = model_name
         self._timeout_seconds = timeout_seconds
 
     def classify(self, transcript: str, call_id: str) -> ClassificationResult:
-        """Classify using Gemini 1.5 Pro.
+        """Classify using the Gemini API (google-genai SDK)."""
+        api_key = os.environ.get("GEMINI_API_KEY")
+        if not api_key:
+            raise NotImplementedError(
+                f"LiveGeminiClassifier({self._model_name!r}) requires GEMINI_API_KEY. "
+                "Use MockGeminiClassifier for testing."
+            )
 
-        Raises ``NotImplementedError`` until the google-generativeai
-        package is configured with a valid API key.
-        """
-        _ = build_classification_prompt(transcript)
-        _ = SYSTEM_PROMPT
-        raise NotImplementedError(
-            f"LiveGeminiClassifier({self._model_name!r}) requires "
-            "google-generativeai with a valid API key. "
-            "Use MockGeminiClassifier for testing."
+        try:
+            from google import genai
+            from google.genai import types
+        except ImportError as exc:
+            raise NotImplementedError(
+                "LiveGeminiClassifier requires google-genai: pip install google-genai"
+            ) from exc
+
+        client = genai.Client(api_key=api_key)
+        prompt = build_classification_prompt(transcript)
+        started = time.monotonic()
+
+        try:
+            response = client.models.generate_content(
+                model=self._model_name,
+                contents=prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=SYSTEM_PROMPT,
+                    temperature=0.1,
+                    max_output_tokens=512,
+                    response_mime_type="application/json",
+                ),
+            )
+        except Exception as exc:
+            message = str(exc)
+            lower = message.lower()
+            if "timeout" in lower or "deadline" in lower:
+                raise GeminiTimeoutError(
+                    f"Gemini API timeout for call {call_id}"
+                ) from exc
+            if "429" in message or "quota" in lower or "resource_exhausted" in lower:
+                raise GeminiQuotaExceededError(message) from exc
+            raise GeminiAPIError(message) from exc
+
+        try:
+            raw_json = json.loads(response.text)
+        except Exception as exc:
+            raise GeminiInvalidJSONError(
+                f"Gemini returned non-JSON for call {call_id}: {response.text!r}"
+            ) from exc
+
+        return ClassificationResult(
+            raw_json=raw_json,
+            latency_seconds=time.monotonic() - started,
+            model_version=self._model_name,
         )

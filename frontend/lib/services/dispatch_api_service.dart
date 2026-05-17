@@ -39,6 +39,11 @@ class DispatchApiService {
   Future<DispatchConfirmResult> confirmDispatch({
     required String callId,
     required String unitId,
+    String? emergencyType,
+    String? severity,
+    double? callerLat,
+    double? callerLng,
+    List<String> keyFacts = const [],
   }) async {
     try {
       final uri = Uri.parse('$baseUrl/api/v1/calls/$callId/dispatch/confirm');
@@ -48,7 +53,14 @@ class DispatchApiService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${_tokenProvider()}',
         },
-        body: jsonEncode({'unit_id': unitId}),
+        body: jsonEncode({
+          'unit_id': unitId,
+          'emergency_type': emergencyType,
+          'severity': severity,
+          'caller_lat': callerLat,
+          'caller_lng': callerLng,
+          'key_facts': keyFacts,
+        }),
       );
 
       if (response.statusCode == 200) {

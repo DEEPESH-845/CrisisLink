@@ -43,7 +43,15 @@ class FirebaseService {
     return _database
         .ref('calls/$callId/transcript')
         .onValue
-        .map((event) => event.snapshot.value as String? ?? '');
+        .map((event) {
+      final value = event.snapshot.value;
+      if (value is String) return value;
+      if (value is Map) {
+        final data = Map<String, dynamic>.from(value);
+        return data['text'] as String? ?? '';
+      }
+      return '';
+    });
   }
 
   /// Streaming Emergency Classification for [callId].

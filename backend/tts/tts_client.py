@@ -141,7 +141,10 @@ class GoogleCloudTTSClient:
                 "google-cloud-texttospeech is not installed"
             ) from exc
 
-        client = texttospeech.TextToSpeechClient()
+        try:
+            client = texttospeech.TextToSpeechClient()
+        except Exception as exc:
+            raise TTSClientError(f"TTS credentials not configured: {exc}") from exc
 
         synthesis_input = texttospeech.SynthesisInput(text=text)
         voice = texttospeech.VoiceSelectionParams(
