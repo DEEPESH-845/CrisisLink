@@ -1,0 +1,3 @@
+# Root requirements.txt — used by Vercel Python serverless functions
+# (api/classify.py, api/health.py)
+google-genai>=2.0.0

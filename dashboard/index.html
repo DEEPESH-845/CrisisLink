@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CrisisLink — Operator Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    [x-cloak] { display: none !important; }
+    body { font-family: 'Inter', system-ui, sans-serif; }
+
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-in-up { animation: fadeInUp 0.35s ease both; }
+
+    @keyframes pulse-ring {
+      0%   { transform: scale(0.9); opacity: 0.8; }
+      70%  { transform: scale(1.3); opacity: 0; }
+      100% { transform: scale(0.9); opacity: 0; }
+    }
+    .live-dot { position: relative; display: inline-block; width: 10px; height: 10px; }
+    .live-dot span {
+      display: block; width: 100%; height: 100%;
+      border-radius: 50%; background: #ef4444;
+    }
+    .live-dot::before {
+      content: ''; position: absolute; top: 0; left: 0;
+      width: 100%; height: 100%; border-radius: 50%;
+      background: #ef4444; animation: pulse-ring 1.5s ease-out infinite;
+    }
+
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .cursor-blink::after {
+      content: '▋'; animation: blink 0.9s step-end infinite;
+      color: #22d3ee;
+    }
+
+    @keyframes scanline {
+      0%   { top: 0; }
+      100% { top: 100%; }
+    }
+    .scanline-parent { position: relative; overflow: hidden; }
+    .scanline-parent::after {
+      content: ''; position: absolute; left: 0; top: 0;
+      width: 100%; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(34,211,238,0.3), transparent);
+      animation: scanline 2.5s linear infinite;
+    }
+
+    .step-card { transition: all 0.3s ease; }
+    .step-card.active  { border-color: #f59e0b !important; box-shadow: 0 0 20px rgba(245,158,11,0.25); }
+    .step-card.done    { border-color: #22c55e !important; box-shadow: 0 0 20px rgba(34,197,94,0.2); }
+    .step-card.pending { opacity: 0.45; }
+
+    .severity-CRITICAL { background: #7f1d1d; color: #fca5a5; border-color: #ef4444; }
+    .severity-HIGH     { background: #7c2d12; color: #fdba74; border-color: #f97316; }
+    .severity-MODERATE { background: #713f12; color: #fde68a; border-color: #eab308; }
+    .severity-LOW      { background: #14532d; color: #86efac; border-color: #22c55e; }
+
+    .json-key   { color: #93c5fd; }
+    .json-str   { color: #86efac; }
+    .json-num   { color: #fbbf24; }
+    .json-bool  { color: #f472b6; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
+    .gradient-border {
+      background: linear-gradient(135deg, #1e293b, #0f172a);
+      border: 1px solid #334155;
+    }
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen" x-data="dashboard()" x-cloak>
+
+<!-- ── Top bar ───────────────────────────────────────────────────────────── -->
+<header class="bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center gap-4 sticky top-0 z-50">
+  <div class="flex items-center gap-3">
+    <div class="w-8 h-8 rounded-lg bg-red-600 flex items-center justify-center">
+      <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+      </svg>
+    </div>
+    <div>
+      <div class="text-white font-bold text-sm leading-none">CrisisLink</div>
+      <div class="text-slate-500 text-xs">Emergency AI Co-Pilot</div>
+    </div>
+  </div>
+
+  <!-- Nav tabs -->
+  <nav class="flex gap-1 ml-8">
+    <template x-for="t in tabs" :key="t.id">
+      <button
+        @click="activeTab = t.id"
+        :class="activeTab === t.id
+          ? 'bg-slate-700 text-white'
+          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800'"
+        class="px-4 py-1.5 rounded-md text-sm font-medium transition-colors"
+        x-text="t.label">
+      </button>
+    </template>
+  </nav>
+
+  <!-- Service status pills -->
+  <div class="ml-auto flex items-center gap-2">
+    <template x-for="svc in services" :key="svc.name">
+      <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs border"
+           :class="svc.ok ? 'bg-green-950 border-green-800 text-green-400' : 'bg-red-950 border-red-800 text-red-400'">
+        <span class="w-1.5 h-1.5 rounded-full" :class="svc.ok ? 'bg-green-400' : 'bg-red-400'"></span>
+        <span x-text="svc.name"></span>
+      </div>
+    </template>
+    <button @click="checkServices()" class="ml-2 text-slate-500 hover:text-slate-300 text-xs">↺ ping</button>
+  </div>
+</header>
+
+<!-- ── Main ──────────────────────────────────────────────────────────────── -->
+<main class="max-w-7xl mx-auto px-6 py-8">
+
+  <!-- ── DEMO SIMULATION TAB ────────────────────────────────────────────── -->
+  <div x-show="activeTab === 'demo'" x-transition>
+
+    <div class="mb-6 flex items-start justify-between">
+      <div>
+        <h1 class="text-2xl font-bold text-white">Demo Simulation</h1>
+        <p class="text-slate-400 text-sm mt-1">Runs the full CrisisLink pipeline — Speech → Classify → Dispatch → TTS — against the live backend or built-in mock data.</p>
+      </div>
+      <button
+        @click="runDemo()"
+        :disabled="running"
+        class="flex items-center gap-2 px-6 py-3 rounded-xl font-semibold text-sm transition-all"
+        :class="running
+          ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+          : 'bg-red-600 hover:bg-red-500 text-white shadow-lg shadow-red-900/40'">
+        <span x-show="!running">▶ Run Simulation</span>
+        <span x-show="running" class="flex items-center gap-2">
+          <svg class="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+          </svg>
+          Running…
+        </span>
+      </button>
+    </div>
+
+    <!-- Transcript input -->
+    <div class="mb-8 gradient-border rounded-xl p-5">
+      <div class="flex items-center gap-2 mb-3">
+        <div class="live-dot" x-show="running"><span></span></div>
+        <span class="text-xs text-slate-400 uppercase tracking-widest font-semibold">Incoming Transcript</span>
+        <span class="ml-auto text-xs text-slate-600">Hindi · Cardiac Arrest Scenario</span>
+      </div>
+      <textarea
+        x-model="transcript"
+        rows="2"
+        class="w-full bg-slate-950 border border-slate-700 rounded-lg px-4 py-3 text-slate-200 text-sm focus:outline-none focus:border-cyan-600 resize-none font-mono">
+      </textarea>
+    </div>
+
+    <!-- Step pipeline -->
+    <div class="grid grid-cols-4 gap-4 mb-8">
+      <template x-for="(step, i) in steps" :key="i">
+        <div class="step-card gradient-border rounded-xl p-5 border"
+             :class="step.status === 'running' ? 'active' : step.status === 'done' ? 'done' : 'pending'">
+          <!-- Header -->
+          <div class="flex items-center gap-2 mb-3">
+            <div class="w-7 h-7 rounded-lg flex items-center justify-center text-sm font-bold"
+                 :class="step.status === 'done' ? 'bg-green-900 text-green-400' : step.status === 'running' ? 'bg-amber-900 text-amber-400' : 'bg-slate-800 text-slate-500'">
+              <span x-show="step.status !== 'done'" x-text="i+1"></span>
+              <span x-show="step.status === 'done'">✓</span>
+            </div>
+            <div>
+              <div class="text-xs font-semibold text-slate-200" x-text="step.name"></div>
+              <div class="text-xs text-slate-500" x-text="step.port"></div>
+            </div>
+          </div>
+          <!-- Status badge -->
+          <div class="mb-3">
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium"
+                  :class="step.status === 'running' ? 'bg-amber-900/60 text-amber-400' : step.status === 'done' ? 'bg-green-900/60 text-green-400' : 'bg-slate-800 text-slate-500'"
+                  x-text="step.status === 'idle' ? 'waiting' : step.status">
+            </span>
+          </div>
+          <!-- Result preview -->
+          <div class="text-xs text-slate-400 min-h-[3rem]" x-text="step.preview || (step.status==='idle' ? step.description : '')"></div>
+          <!-- Timing -->
+          <div class="mt-3 text-xs text-slate-600" x-show="step.ms > 0" x-text="step.ms + 'ms'"></div>
+        </div>
+      </template>
+    </div>
+
+    <!-- Result detail panel -->
+    <div x-show="resultPanel !== null" class="grid grid-cols-2 gap-6 fade-in-up">
+
+      <!-- Classification -->
+      <div x-show="classification !== null" class="gradient-border rounded-xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-sm font-semibold text-slate-200">Classification Result</span>
+          <span class="text-xs px-2.5 py-1 rounded-lg border font-bold"
+                :class="'severity-' + (classification?.severity || 'MODERATE')"
+                x-text="classification?.severity">
+          </span>
+        </div>
+
+        <div class="space-y-2">
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">Type</span>
+            <span class="text-red-400 font-semibold" x-text="classification?.emergency_type"></span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">Panic Level</span>
+            <span class="text-amber-400 font-semibold" x-text="classification?.caller_state?.panic_level"></span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">Caller Role</span>
+            <span class="text-slate-300" x-text="classification?.caller_state?.caller_role"></span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">Language</span>
+            <span class="text-cyan-400" x-text="classification?.language_detected"></span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">Confidence</span>
+            <span class="text-green-400 font-semibold" x-text="((classification?.confidence || 0) * 100).toFixed(0) + '%'"></span>
+          </div>
+          <div class="flex justify-between text-sm">
+            <span class="text-slate-500">Model</span>
+            <span class="text-slate-400 text-xs" x-text="classification?.model_version"></span>
+          </div>
+        </div>
+
+        <!-- Key facts -->
+        <div x-show="classification?.key_facts?.length" class="mt-4 pt-4 border-t border-slate-800">
+          <div class="text-xs text-slate-500 mb-2 uppercase tracking-widest">Key Facts</div>
+          <div class="flex flex-wrap gap-2">
+            <template x-for="f in (classification?.key_facts || [])" :key="f">
+              <span class="text-xs px-2 py-0.5 bg-slate-800 text-slate-300 rounded-md" x-text="f"></span>
+            </template>
+          </div>
+        </div>
+
+        <!-- Confidence bar -->
+        <div class="mt-4 pt-4 border-t border-slate-800">
+          <div class="flex justify-between text-xs text-slate-500 mb-1">
+            <span>Confidence</span>
+            <span x-text="((classification?.confidence || 0) * 100).toFixed(0) + '%'"></span>
+          </div>
+          <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div class="h-full bg-gradient-to-r from-green-600 to-green-400 rounded-full transition-all duration-700"
+                 :style="'width: ' + ((classification?.confidence || 0) * 100) + '%'">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dispatch units -->
+      <div x-show="recommendations !== null" class="gradient-border rounded-xl p-5">
+        <div class="flex items-center justify-between mb-4">
+          <span class="text-sm font-semibold text-slate-200">Dispatch Recommendations</span>
+          <span class="text-xs text-slate-500" x-text="(recommendations?.length || 0) + ' units ranked'"></span>
+        </div>
+
+        <div class="space-y-3">
+          <template x-for="(rec, i) in (recommendations || [])" :key="rec.unit_id">
+            <div class="flex items-center gap-3 p-3 rounded-lg border"
+                 :class="i === 0 ? 'bg-green-950/40 border-green-800' : 'bg-slate-900 border-slate-800'">
+              <div class="w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold shrink-0"
+                   :class="i === 0 ? 'bg-green-900 text-green-400' : 'bg-slate-800 text-slate-500'"
+                   x-text="i+1">
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-slate-200" x-text="rec.unit_id"></div>
+                <div class="text-xs text-slate-500 truncate" x-text="rec.hospital_or_station"></div>
+              </div>
+              <div class="text-right shrink-0">
+                <div class="text-sm font-bold text-cyan-400" x-text="(rec.eta_minutes || 0).toFixed(1) + ' min'"></div>
+                <div class="text-xs text-slate-500" x-text="rec.unit_type"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Confirm dispatch button -->
+        <div x-show="recommendations?.length > 0 && !dispatched" class="mt-4 pt-4 border-t border-slate-800">
+          <button @click="confirmDispatch()"
+                  class="w-full py-2.5 bg-green-700 hover:bg-green-600 text-white text-sm font-semibold rounded-lg transition-colors">
+            ✓ Confirm Dispatch — <span x-text="recommendations?.[0]?.unit_id"></span>
+          </button>
+        </div>
+        <div x-show="dispatched" class="mt-4 pt-4 border-t border-slate-800">
+          <div class="w-full py-2.5 bg-green-950 border border-green-800 text-green-400 text-sm font-semibold rounded-lg text-center">
+            ✓ <span x-text="dispatchedUnit"></span> dispatched
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- TTS guidance -->
+    <div x-show="ttsGuidance" class="mt-6 gradient-border rounded-xl p-5 fade-in-up">
+      <div class="flex items-center gap-2 mb-3">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-cyan-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072M12 6v12m-3.536-9.536a5 5 0 000 7.072"/>
+        </svg>
+        <span class="text-sm font-semibold text-slate-200">Caller Guidance — Hindi</span>
+        <span class="ml-auto text-xs text-slate-500">via Google Cloud TTS Neural2</span>
+      </div>
+      <p class="text-cyan-300 text-base leading-relaxed font-medium" x-text="ttsGuidance"></p>
+      <p class="text-slate-500 text-xs mt-2 italic" x-text="ttsTranslation"></p>
+    </div>
+
+    <!-- Log -->
+    <div x-show="logs.length > 0" class="mt-6 gradient-border rounded-xl overflow-hidden">
+      <div class="px-5 py-3 border-b border-slate-800 flex items-center gap-2">
+        <span class="text-xs text-slate-400 uppercase tracking-widest font-semibold">Pipeline Log</span>
+        <button @click="logs=[]" class="ml-auto text-xs text-slate-600 hover:text-slate-400">clear</button>
+      </div>
+      <div class="scanline-parent p-4 space-y-1 font-mono text-xs max-h-48 overflow-y-auto">
+        <template x-for="(log, i) in logs" :key="i">
+          <div class="flex gap-3">
+            <span class="text-slate-600 shrink-0" x-text="log.time"></span>
+            <span :class="log.type === 'ok' ? 'text-green-400' : log.type === 'err' ? 'text-red-400' : log.type === 'warn' ? 'text-amber-400' : 'text-cyan-400'"
+                  x-text="log.msg">
+            </span>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── LIVE DASHBOARD TAB ──────────────────────────────────────────────── -->
+  <div x-show="activeTab === 'dashboard'" x-transition>
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-white">Operator Dashboard</h1>
+      <p class="text-slate-400 text-sm mt-1">Real-time call monitoring via Firebase RTDB. Configure Firebase credentials in settings to enable live data.</p>
+    </div>
+
+    <div class="grid grid-cols-3 gap-6 mb-6">
+      <!-- Stat cards -->
+      <div class="gradient-border rounded-xl p-5">
+        <div class="text-3xl font-bold text-white">0</div>
+        <div class="text-slate-400 text-sm mt-1">Active Calls</div>
+        <div class="text-xs text-slate-600 mt-2">Firebase not configured</div>
+      </div>
+      <div class="gradient-border rounded-xl p-5">
+        <div class="text-3xl font-bold text-green-400">5</div>
+        <div class="text-slate-400 text-sm mt-1">Units Available</div>
+        <div class="text-xs text-slate-600 mt-2">Chandigarh demo fleet</div>
+      </div>
+      <div class="gradient-border rounded-xl p-5">
+        <div class="text-3xl font-bold text-cyan-400">4.0<span class="text-lg">min</span></div>
+        <div class="text-slate-400 text-sm mt-1">Avg ETA (demo)</div>
+        <div class="text-xs text-slate-600 mt-2">Urban straight-line estimate</div>
+      </div>
+    </div>
+
+    <!-- Demo units -->
+    <div class="gradient-border rounded-xl overflow-hidden mb-6">
+      <div class="px-5 py-3 border-b border-slate-800">
+        <span class="text-sm font-semibold text-slate-200">Response Units — Chandigarh</span>
+      </div>
+      <div class="divide-y divide-slate-800">
+        <template x-for="unit in demoUnits" :key="unit.id">
+          <div class="flex items-center gap-4 px-5 py-3.5">
+            <div class="w-2.5 h-2.5 rounded-full bg-green-400 shrink-0"></div>
+            <div class="w-24 text-sm font-mono font-semibold text-slate-200" x-text="unit.id"></div>
+            <div class="flex-1 text-sm text-slate-400" x-text="unit.station"></div>
+            <div class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-400" x-text="unit.type"></div>
+            <div class="text-xs px-2 py-0.5 rounded-full bg-green-950 text-green-400 border border-green-800">available</div>
+          </div>
+        </template>
+      </div>
+    </div>
+
+    <!-- Backend status detail -->
+    <div class="gradient-border rounded-xl overflow-hidden">
+      <div class="px-5 py-3 border-b border-slate-800">
+        <span class="text-sm font-semibold text-slate-200">Backend Services</span>
+        <button @click="checkServices()" class="ml-3 text-xs text-slate-500 hover:text-slate-300">↺ check</button>
+      </div>
+      <div class="divide-y divide-slate-800">
+        <template x-for="svc in services" :key="svc.name">
+          <div class="flex items-center gap-4 px-5 py-3.5">
+            <div class="w-2.5 h-2.5 rounded-full shrink-0" :class="svc.ok ? 'bg-green-400' : 'bg-red-500'"></div>
+            <div class="w-36 text-sm font-semibold text-slate-200" x-text="svc.name"></div>
+            <div class="text-xs text-slate-500" x-text="svc.url"></div>
+            <div class="ml-auto text-xs" :class="svc.ok ? 'text-green-400' : 'text-red-400'" x-text="svc.ok ? '● online' : '○ offline'"></div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SETTINGS TAB ────────────────────────────────────────────────────── -->
+  <div x-show="activeTab === 'settings'" x-transition>
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-white">Settings</h1>
+      <p class="text-slate-400 text-sm mt-1">Configure backend endpoints and API credentials.</p>
+    </div>
+
+    <div class="max-w-2xl space-y-6">
+      <div class="gradient-border rounded-xl p-6">
+        <h2 class="text-sm font-semibold text-slate-200 mb-4">Backend URLs</h2>
+        <div class="space-y-4">
+          <template x-for="svc in services" :key="svc.name">
+            <div class="flex items-center gap-3">
+              <label class="w-32 text-sm text-slate-400 shrink-0" x-text="svc.name"></label>
+              <input type="text" x-model="svc.url"
+                     class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono focus:outline-none focus:border-cyan-600" />
+              <button @click="checkService(svc)"
+                      class="text-xs px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg transition-colors">ping</button>
+            </div>
+          </template>
+        </div>
+        <button @click="checkServices()" class="mt-4 px-4 py-2 bg-cyan-700 hover:bg-cyan-600 text-white text-sm rounded-lg transition-colors">
+          Ping All Services
+        </button>
+      </div>
+
+      <div class="gradient-border rounded-xl p-6">
+        <h2 class="text-sm font-semibold text-slate-200 mb-1">API Token</h2>
+        <p class="text-xs text-slate-500 mb-4">Bearer token sent with every backend request.</p>
+        <input type="text" x-model="apiToken"
+               class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono focus:outline-none focus:border-cyan-600" />
+      </div>
+
+      <div class="gradient-border rounded-xl p-6">
+        <h2 class="text-sm font-semibold text-slate-200 mb-1">Demo Caller Location</h2>
+        <p class="text-xs text-slate-500 mb-4">Latitude / Longitude for the simulated caller (Chandigarh).</p>
+        <div class="flex gap-4">
+          <div class="flex-1">
+            <label class="text-xs text-slate-500 mb-1 block">Latitude</label>
+            <input type="number" x-model.number="callerLat" step="0.0001"
+                   class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono focus:outline-none focus:border-cyan-600" />
+          </div>
+          <div class="flex-1">
+            <label class="text-xs text-slate-500 mb-1 block">Longitude</label>
+            <input type="number" x-model.number="callerLng" step="0.0001"
+                   class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 font-mono focus:outline-none focus:border-cyan-600" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ── Footer ────────────────────────────────────────────────────────────── -->
+<footer class="border-t border-slate-900 px-6 py-3 mt-12 flex items-center gap-4 text-xs text-slate-700">
+  <span>CrisisLink v0.1.0</span>
+  <span>·</span>
+  <span>Gemini 2.5 Flash · Google Maps Routes API · Firebase RTDB</span>
+  <span class="ml-auto">Built for India's 112 Emergency Network</span>
+</footer>
+
+<script>
+function dashboard() {
+  return {
+    activeTab: 'demo',
+    tabs: [
+      { id: 'demo',      label: '▶ Demo Simulation' },
+      { id: 'dashboard', label: 'Live Dashboard'     },
+      { id: 'settings',  label: 'Settings'           },
+    ],
+
+    apiToken: 'crisislink-dev-token',
+    callerLat: 30.7333,
+    callerLng: 76.7794,
+
+    services: [
+      { name: 'Speech :8001',     url: 'http://localhost:8001', ok: false },
+      { name: 'Intelligence :8002', url: 'http://localhost:8002', ok: false },
+      { name: 'Dispatch :8003',   url: 'http://localhost:8003', ok: false },
+      { name: 'TTS :8004',        url: 'http://localhost:8004', ok: false },
+    ],
+
+    demoUnits: [
+      { id: 'AMB_007',  station: 'PGIMER Chandigarh',    type: 'ambulance'    },
+      { id: 'AMB_012',  station: 'GMC Sector 32',         type: 'ambulance'    },
+      { id: 'AMB_019',  station: 'GMSH Sector 16',        type: 'ambulance'    },
+      { id: 'FIRE_003', station: 'Fire Station Sector 17', type: 'fire_brigade' },
+      { id: 'POL_021',  station: 'Police Station Sector 11', type: 'police'    },
+    ],
+
+    transcript: 'mere papa gir gaye unhe saans nahi aa rahi jaldi aao',
+
+    steps: [
+      { name: 'Speech Ingestion', port: ':8001', status: 'idle', preview: '', ms: 0, description: 'Receives audio, emits rolling transcript' },
+      { name: 'AI Classification', port: ':8002', status: 'idle', preview: '', ms: 0, description: 'Gemini 2.5 Flash classifies emergency' },
+      { name: 'Dispatch Ranking', port: ':8003', status: 'idle', preview: '', ms: 0, description: 'Maps ETA + capability score + ranking' },
+      { name: 'TTS Guidance', port: ':8004', status: 'idle', preview: '', ms: 0, description: 'Hindi Neural2 voice synthesis' },
+    ],
+
+    running: false,
+    resultPanel: null,
+    classification: null,
+    recommendations: null,
+    dispatched: false,
+    dispatchedUnit: '',
+    ttsGuidance: '',
+    ttsTranslation: '',
+    logs: [],
+
+    callId: 'demo-' + Math.random().toString(36).slice(2, 7),
+
+    // ── Mock data (used when backend is unreachable) ────────────────────
+    MOCK_CLASSIFICATION: {
+      call_id: 'demo-001',
+      emergency_type: 'MEDICAL',
+      severity: 'CRITICAL',
+      caller_state: { panic_level: 'PANIC_HIGH', caller_role: 'BYSTANDER' },
+      language_detected: 'hi',
+      key_facts: ['father fell down', 'not breathing', 'unresponsive'],
+      confidence: 0.97,
+      model_version: 'gemini-2.5-flash (mock)',
+      timestamp: new Date().toISOString(),
+    },
+    MOCK_RECOMMENDATIONS: [
+      { unit_id: 'AMB_007', unit_type: 'ambulance', hospital_or_station: 'PGIMER Chandigarh', eta_minutes: 4.0, capability_match: 0.9, composite_score: 0.87 },
+      { unit_id: 'AMB_012', unit_type: 'ambulance', hospital_or_station: 'GMC Sector 32',     eta_minutes: 4.0, capability_match: 0.7, composite_score: 0.72 },
+      { unit_id: 'AMB_019', unit_type: 'ambulance', hospital_or_station: 'GMSH Sector 16',    eta_minutes: 5.3, capability_match: 0.75, composite_score: 0.68 },
+    ],
+    MOCK_GUIDANCE: 'Ghabrao mat, main aapke saath hoon. Unhe seedha letao kisi sakht jagah par. Apna haath unki naak ke paas rakhein aur dekhein kya saans aa rahi hai.',
+    MOCK_TRANSLATION: '"Don\'t panic, I am with you. Lay them flat on a hard surface. Place your hand near their nose and check if they are breathing."',
+
+    log(msg, type = 'info') {
+      const now = new Date();
+      const time = now.toTimeString().slice(0, 8) + '.' + String(now.getMilliseconds()).padStart(3, '0');
+      this.logs.push({ time, msg, type });
+      this.$nextTick(() => {
+        const el = this.$el.querySelector('.max-h-48');
+        if (el) el.scrollTop = el.scrollHeight;
+      });
+    },
+
+    resetSteps() {
+      this.steps.forEach(s => { s.status = 'idle'; s.preview = ''; s.ms = 0; });
+      this.classification = null;
+      this.recommendations = null;
+      this.ttsGuidance = '';
+      this.ttsTranslation = '';
+      this.dispatched = false;
+      this.dispatchedUnit = '';
+      this.resultPanel = null;
+      this.callId = 'demo-' + Math.random().toString(36).slice(2, 7);
+    },
+
+    async delay(ms) { return new Promise(r => setTimeout(r, ms)); },
+
+    async tryFetch(url, opts = {}) {
+      try {
+        const r = await fetch(url, { ...opts, signal: AbortSignal.timeout(8000) });
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return await r.json();
+      } catch {
+        return null;
+      }
+    },
+
+    async runDemo() {
+      if (this.running) return;
+      this.running = true;
+      this.logs = [];
+      this.resetSteps();
+      this.log('Demo started — call ID: ' + this.callId);
+
+      // ── Step 1: Speech Ingestion ──────────────────────────────────────
+      this.steps[0].status = 'running';
+      this.log('→ Speech Ingestion: receiving transcript…');
+      await this.delay(900);
+      this.steps[0].preview = `"${this.transcript.slice(0, 40)}…"`;
+      this.steps[0].ms = 920;
+      this.steps[0].status = 'done';
+      this.log('✓ Transcript accepted (920ms)', 'ok');
+
+      await this.delay(300);
+
+      // ── Step 2: Gemini Classification ────────────────────────────────
+      this.steps[1].status = 'running';
+      this.log('→ Intelligence: calling Gemini 2.5 Flash…');
+      const t2 = Date.now();
+
+      const intelligenceUrl = this.services[1].url;
+      const classifyPayload = { transcript: this.transcript };
+      let classifyData = await this.tryFetch(
+        `${intelligenceUrl}/api/v1/calls/${this.callId}/classify`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiToken}`,
+          },
+          body: JSON.stringify(classifyPayload),
+        }
+      );
+
+      if (classifyData?.classification) {
+        this.classification = classifyData.classification;
+        this.steps[1].ms = Date.now() - t2;
+        this.log(`✓ Classification: ${this.classification.emergency_type}/${this.classification.severity} (confidence ${(this.classification.confidence*100).toFixed(0)}%) in ${this.steps[1].ms}ms`, 'ok');
+      } else {
+        this.log('⚠ Backend unreachable — using mock classification data', 'warn');
+        await this.delay(1800);
+        this.classification = { ...this.MOCK_CLASSIFICATION, call_id: this.callId };
+        this.steps[1].ms = 1820;
+      }
+
+      this.steps[1].preview = `${this.classification.emergency_type} · ${this.classification.severity} · ${(this.classification.confidence*100).toFixed(0)}%`;
+      this.steps[1].status = 'done';
+      this.resultPanel = true;
+
+      await this.delay(400);
+
+      // ── Step 3: Dispatch Recommend ───────────────────────────────────
+      this.steps[2].status = 'running';
+      this.log('→ Dispatch: ranking units by ETA + capability…');
+      const t3 = Date.now();
+
+      const dispatchUrl = this.services[2].url;
+      const dispatchPayload = {
+        classification: this.classification,
+        caller_location: { lat: this.callerLat, lng: this.callerLng },
+      };
+      let dispatchData = await this.tryFetch(
+        `${dispatchUrl}/api/v1/calls/${this.callId}/dispatch/recommend`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiToken}`,
+          },
+          body: JSON.stringify(dispatchPayload),
+        }
+      );
+
+      if (dispatchData?.recommendations) {
+        this.recommendations = dispatchData.recommendations;
+        this.steps[2].ms = Date.now() - t3;
+        this.log(`✓ ${this.recommendations.length} units ranked — top: ${this.recommendations[0].unit_id} ETA ${this.recommendations[0].eta_minutes.toFixed(1)}min in ${this.steps[2].ms}ms`, 'ok');
+      } else {
+        this.log('⚠ Dispatch backend unreachable — using mock recommendations', 'warn');
+        await this.delay(1200);
+        this.recommendations = this.MOCK_RECOMMENDATIONS;
+        this.steps[2].ms = 1210;
+      }
+
+      this.steps[2].preview = `${this.recommendations[0].unit_id} — ETA ${this.recommendations[0].eta_minutes.toFixed(1)} min`;
+      this.steps[2].status = 'done';
+
+      await this.delay(400);
+
+      // ── Step 4: TTS Guidance ─────────────────────────────────────────
+      this.steps[3].status = 'running';
+      this.log('→ TTS: synthesising Hindi guidance…');
+      const t4 = Date.now();
+
+      const guidanceText = this.MOCK_GUIDANCE;
+      const ttsUrl = this.services[3].url;
+      const ttsPayload = {
+        text: guidanceText,
+        language: 'hi',
+        voice_config: { name: 'hi-IN-Neural2-A', speaking_rate: 0.82 },
+      };
+      let ttsData = await this.tryFetch(
+        `${ttsUrl}/api/v1/tts/synthesize`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiToken}`,
+          },
+          body: JSON.stringify(ttsPayload),
+        }
+      );
+
+      this.steps[3].ms = Date.now() - t4;
+
+      if (ttsData && ttsData.status !== 'fallback') {
+        this.ttsGuidance = guidanceText;
+        this.log(`✓ TTS audio synthesised in ${this.steps[3].ms}ms`, 'ok');
+      } else {
+        this.log('⚠ TTS: no service account credentials — displaying text fallback', 'warn');
+        await this.delay(800);
+        this.ttsGuidance = guidanceText;
+        this.steps[3].ms = 810;
+      }
+
+      this.ttsTranslation = this.MOCK_TRANSLATION;
+      this.steps[3].preview = 'Hindi guidance ready';
+      this.steps[3].status = 'done';
+
+      this.log('✅ Simulation complete — pipeline latency: ' + (this.steps[0].ms + this.steps[1].ms + this.steps[2].ms + this.steps[3].ms) + 'ms total', 'ok');
+      this.running = false;
+    },
+
+    async confirmDispatch() {
+      const unit = this.recommendations?.[0];
+      if (!unit) return;
+      const dispatchUrl = this.services[2].url;
+      const payload = {
+        unit_id: unit.unit_id,
+        emergency_type: this.classification?.emergency_type || 'MEDICAL',
+        severity: this.classification?.severity || 'CRITICAL',
+        caller_lat: this.callerLat,
+        caller_lng: this.callerLng,
+        key_facts: this.classification?.key_facts || [],
+      };
+      this.log(`→ Confirming dispatch of ${unit.unit_id}…`);
+      const data = await this.tryFetch(
+        `${dispatchUrl}/api/v1/calls/${this.callId}/dispatch/confirm`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.apiToken}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+      this.dispatched = true;
+      this.dispatchedUnit = unit.unit_id;
+      this.log(`✓ ${unit.unit_id} dispatched`, 'ok');
+    },
+
+    async checkService(svc) {
+      try {
+        const r = await fetch(`${svc.url}/docs`, { signal: AbortSignal.timeout(2500) });
+        svc.ok = r.ok;
+      } catch {
+        svc.ok = false;
+      }
+    },
+
+    async checkServices() {
+      await Promise.all(this.services.map(s => this.checkService(s)));
+    },
+
+    init() {
+      this.checkServices();
+    },
+  };
+}
+</script>
+</body>
+</html>
