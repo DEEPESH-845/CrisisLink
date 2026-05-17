@@ -24,6 +24,8 @@ from __future__ import annotations
 import json
 import math
 import os
+import urllib.error
+import urllib.request
 from datetime import datetime, timezone
 from typing import Any
 
@@ -116,6 +118,52 @@ def _urban_eta(dist_km: float) -> float:
     return max(dist_km * 1.5 / 25.0 * 60.0, 4.0)
 
 
+_maps_key_blocked: bool = False
+
+
+def _routes_eta(origin_lat: float, origin_lng: float, dest_lat: float, dest_lng: float) -> float | None:
+    """Call Google Maps Routes API; return minutes or None to trigger fallback."""
+    global _maps_key_blocked
+    api_key = os.environ.get("GOOGLE_MAPS_API_KEY", "")
+    if not api_key or _maps_key_blocked:
+        return None
+    payload = json.dumps({
+        "origin":      {"location": {"latLng": {"latitude": origin_lat, "longitude": origin_lng}}},
+        "destination": {"location": {"latLng": {"latitude": dest_lat,   "longitude": dest_lng}}},
+        "travelMode": "DRIVE",
+        "routingPreference": "TRAFFIC_AWARE_OPTIMAL",
+        "computeAlternativeRoutes": False,
+        "languageCode": "en-IN",
+        "units": "METRIC",
+    }).encode()
+    req = urllib.request.Request(
+        "https://routes.googleapis.com/directions/v2:computeRoutes",
+        data=payload,
+        headers={
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": api_key,
+            "X-Goog-FieldMask": "routes.duration,routes.distanceMeters",
+        },
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read())
+        routes = data.get("routes") or []
+        if not routes:
+            return None
+        duration = routes[0].get("duration", "")
+        if not isinstance(duration, str) or not duration.endswith("s"):
+            return None
+        return float(duration[:-1]) / 60.0
+    except urllib.error.HTTPError as e:
+        if e.code == 403:
+            _maps_key_blocked = True  # stop retrying for this function instance
+        return None
+    except Exception:
+        return None
+
+
 # ── Demo response units — Chandigarh ──────────────────────────────────────────
 _UNITS = [
     {"unit_id": "AMB_007",  "type": "ambulance",    "lat": 30.7340, "lng": 76.7820, "station": "PGIMER Chandigarh",        "caps": {"CARDIAC", "TRAUMA"}},
@@ -195,6 +243,7 @@ async def health():
         "status": "ok",
         "version": "0.1.0",
         "gemini": bool(os.environ.get("GEMINI_API_KEY")),
+        "maps": bool(os.environ.get("GOOGLE_MAPS_API_KEY")) and not _maps_key_blocked,
         "firebase": bool(os.environ.get("FIREBASE_SERVICE_ACCOUNT_B64") and os.environ.get("FIREBASE_DATABASE_URL")),
     }
 
@@ -335,7 +384,8 @@ async def recommend(
     scored = []
     for u in _UNITS:
         dist = _haversine(u["lat"], u["lng"], clat, clng)
-        eta = _urban_eta(dist)
+        real_eta = _routes_eta(u["lat"], u["lng"], clat, clng)
+        eta = real_eta if real_eta is not None else _urban_eta(dist)
         cap_ok = bool(u["caps"] & needed)
         score = (1.0 / (1 + eta / 10)) * 0.7 + (0.3 if cap_ok else 0.05)
         scored.append({
@@ -343,6 +393,7 @@ async def recommend(
             "unit_type": u["type"],
             "hospital_or_station": u["station"],
             "eta_minutes": round(eta, 1),
+            "eta_source": "maps" if real_eta is not None else "estimated",
             "capability_match": 1.0 if cap_ok else 0.3,
             "composite_score": round(score, 3),
             "distance_km": round(dist, 2),
