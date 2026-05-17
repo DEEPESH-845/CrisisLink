@@ -1,3 +1,5 @@
-# Root requirements.txt — used by Vercel Python serverless functions
-# (api/classify.py, api/health.py)
+# Root requirements.txt — used by Vercel Python serverless (api/index.py)
+# Keep minimal to stay within Vercel's 50MB compressed function size limit.
 google-genai>=2.0.0
+fastapi>=0.115.0
+pydantic>=2.0.0

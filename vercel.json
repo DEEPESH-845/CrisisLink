@@ -3,13 +3,13 @@
   "name": "crisislink",
   "outputDirectory": "dashboard",
   "functions": {
-    "api/classify.py": { "runtime": "python3.9", "maxDuration": 30 },
-    "api/health.py":   { "runtime": "python3.9", "maxDuration": 10 }
+    "api/index.py": {
+      "runtime": "python3.9",
+      "maxDuration": 30
+    }
   },
-  "routes": [
-    { "src": "/api/health",   "dest": "/api/health.py"   },
-    { "src": "/api/classify", "dest": "/api/classify.py" },
-    { "src": "/(.*)",         "dest": "/$1"              }
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/api/index.py" }
   ],
   "headers": [
     {
@@ -20,9 +20,5 @@
         { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
       ]
     }
-  ],
-  "env": {
-    "GEMINI_API_KEY":       "@gemini-api-key",
-    "CRISISLINK_API_TOKEN": "@crisislink-api-token"
-  }
+  ]
 }
